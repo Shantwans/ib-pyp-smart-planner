@@ -1,27 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
 <title>IB PYP Smart Planner</title>
 
 <style>
 body {
-    font-family: "Segoe UI", sans-serif;
     margin: 0;
-    background: #f3f5f7;
+    font-family: "Segoe UI", sans-serif;
+    background: #f4f6f8;
 }
 
 header {
     background: #2c3e50;
     color: white;
-    padding: 15px;
+    padding: 15px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-}
-
-header h1 {
-    font-size: 18px;
 }
 
 button {
@@ -32,10 +28,12 @@ button {
 }
 
 .primary { background: #1abc9c; color: white; }
+.danger { background: #e74c3c; color: white; }
 .secondary { background: #34495e; color: white; }
 
 .container {
     display: flex;
+    height: calc(100vh - 60px);
 }
 
 .sidebar {
@@ -43,14 +41,40 @@ button {
     background: #ffffff;
     padding: 15px;
     border-right: 1px solid #ddd;
+    overflow-y: auto;
 }
 
 .main {
     flex: 1;
     padding: 25px;
+    overflow-y: auto;
 }
 
-select, input, textarea {
+.unit {
+    padding: 8px;
+    margin: 5px 0;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #ecf0f1;
+}
+
+.unit:hover {
+    background: #dfe6e9;
+}
+
+.active {
+    background: #1abc9c;
+    color: white;
+}
+
+.section {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+input, textarea, select {
     width: 100%;
     padding: 8px;
     margin-top: 6px;
@@ -62,47 +86,32 @@ textarea {
     min-height: 80px;
 }
 
-.section {
-    margin-bottom: 30px;
-}
-
 h3 {
     border-bottom: 1px solid #ddd;
-    padding-bottom: 6px;
-}
-
-.unit-item {
-    cursor: pointer;
-    padding: 6px;
-    margin: 4px 0;
-    background: #f0f0f0;
-    border-radius: 4px;
-}
-
-.unit-item:hover {
-    background: #e0e0e0;
+    padding-bottom: 5px;
 }
 </style>
-   
-
 </head>
 
 <body>
 
 <header>
-    <h1>📘 IB PYP Smart Planner</h1>
+    <h2>📘 IB PYP Smart Planner</h2>
     <button class="primary" onclick="createUnit()">+ New Unit</button>
 </header>
 
 <div class="container">
 
-<!-- SIDEBAR -->
+<!-- Sidebar -->
 <div class="sidebar">
     <h3>Your Units</h3>
     <div id="unitList"></div>
+    <br>
+    <button class="secondary" onclick="renameUnit()">✏️ Rename</button>
+    <button class="danger" onclick="deleteUnit()">🗑 Delete</button>
 </div>
 
-<!-- MAIN -->
+<!-- Main -->
 <div class="main">
 
 <div class="section">
@@ -112,23 +121,39 @@ h3 {
 <input id="unitTitle">
 
 <label>Transdisciplinary Theme</label>
-<select id="theme"></select>
+<select id="theme">
+    <option value="">Select</option>
+    <option>Who we are</option>
+    <option>Where we are in place and time</option>
+    <option>How we express ourselves</option>
+    <option>How the world works</option>
+    <option>How we organize ourselves</option>
+    <option>Sharing the planet</option>
+</select>
 
 <label>Key Concepts</label>
-<select id="keyConcepts" multiple size="6"></select>
+<select id="keyConcepts" multiple>
+    <option>Form</option>
+    <option>Function</option>
+    <option>Causation</option>
+    <option>Change</option>
+    <option>Connection</option>
+    <option>Perspective</option>
+    <option>Responsibility</option>
+    <option>Reflection</option>
+</select>
 
 <label>Central Idea</label>
 <textarea id="central"></textarea>
 </div>
 
 <div class="section">
-<h3>AI Suggestions</h3>
-<button class="secondary" onclick="generateAISuggestions()">✨ Generate Suggestions</button>
+<h3>AI Suggestions (Auto)</h3>
 
-<label>Suggested Lines of Inquiry</label>
+<label>Lines of Inquiry</label>
 <textarea id="aiInquiry"></textarea>
 
-<label>Suggested Learning Experiences</label>
+<label>Learning Experiences</label>
 <textarea id="aiLearning"></textarea>
 </div>
 
@@ -137,75 +162,58 @@ h3 {
 <textarea id="reflection"></textarea>
 </div>
 
-<<button class="primary" onclick="saveUnit()">💾 Save / Update Unit</button>
-
-
 </div>
 </div>
 
 <script>
-// ---------------- DATA ----------------
-
-const themes = [
-    "Who we are",
-    "Where we are in place and time",
-    "How we express ourselves",
-    "How the world works",
-    "How we organize ourselves",
-    "Sharing the planet"
-];
-
-const concepts = [
-    "Form", "Function", "Causation", "Change",
-    "Connection", "Perspective", "Responsibility", "Reflection"
-];
-
 let units = JSON.parse(localStorage.getItem("PYP_UNITS")) || [];
-let currentUnitIndex = null;
+let currentIndex = null;
 
-// ---------------- INIT ----------------
-function init() {
-    const theme = document.getElementById("theme");
-    const conceptsSelect = document.getElementById("keyConcepts");
-
-    themes.forEach(t => theme.add(new Option(t, t)));
-    concepts.forEach(c => conceptsSelect.add(new Option(c, c)));
-
-    refreshUnitList();
+function renderUnits() {
+    const list = document.getElementById("unitList");
+    list.innerHTML = "";
+    units.forEach((u, i) => {
+        const div = document.createElement("div");
+        div.className = "unit" + (i === currentIndex ? " active" : "");
+        div.textContent = u.name;
+        div.onclick = () => loadUnit(i);
+        list.appendChild(div);
+    });
 }
-window.onload = init;
 
-// ---------------- UNIT HANDLING ----------------
 function createUnit() {
-    const name = prompt("Enter Unit Name:");
+    const name = prompt("Enter unit name:");
     if (!name) return;
 
-    const unit = {
-        name,
-        data: {}
-    };
-
-    units.push(unit);
-    currentUnitIndex = units.length - 1;
+    units.push({ name, data: {} });
+    currentIndex = units.length - 1;
     saveAll();
-    refreshUnitList();
-    loadUnit();
+    renderUnits();
+    loadUnit(currentIndex);
 }
 
-function saveUnit() {
-    
-    // If no unit exists, create one automatically
-    if (currentUnitIndex === null) {
-        const defaultName = "New Unit";
-        units.push({
-            name: defaultName,
-            data: {}
-        });
-        currentUnitIndex = units.length - 1;
-        refreshUnitList();
-    }
+function loadUnit(i) {
+    currentIndex = i;
+    const d = units[i].data || {};
 
-    const data = {
+    unitTitle.value = d.unitTitle || "";
+    theme.value = d.theme || "";
+    central.value = d.central || "";
+    aiInquiry.value = d.aiInquiry || "";
+    aiLearning.value = d.aiLearning || "";
+    reflection.value = d.reflection || "";
+
+    [...keyConcepts.options].forEach(opt => {
+        opt.selected = d.keyConcepts?.includes(opt.value);
+    });
+
+    renderUnits();
+}
+
+function autoSave() {
+    if (currentIndex === null) return;
+
+    units[currentIndex].data = {
         unitTitle: unitTitle.value,
         theme: theme.value,
         keyConcepts: [...keyConcepts.selectedOptions].map(o => o.value),
@@ -215,62 +223,38 @@ function saveUnit() {
         reflection: reflection.value
     };
 
-    units[currentUnitIndex].data = data;
     saveAll();
-
-    alert("✅ Unit saved successfully!");
-}
-
-}
-
-function loadUnit(index) {
-    if (index !== undefined) currentUnitIndex = index;
-    const data = units[currentUnitIndex].data || {};
-
-    unitTitle.value = data.unitTitle || "";
-    theme.value = data.theme || "";
-    central.value = data.central || "";
-    aiInquiry.value = data.aiInquiry || "";
-    aiLearning.value = data.aiLearning || "";
-    reflection.value = data.reflection || "";
-
-    [...keyConcepts.options].forEach(o => {
-        o.selected = data.keyConcepts?.includes(o.value);
-    });
-}
-
-function refreshUnitList() {
-    const list = document.getElementById("unitList");
-    list.innerHTML = "";
-    units.forEach((u, i) => {
-        const div = document.createElement("div");
-        div.className = "unit-item";
-        div.textContent = u.name;
-        div.onclick = () => loadUnit(i);
-        list.appendChild(div);
-    });
 }
 
 function saveAll() {
     localStorage.setItem("PYP_UNITS", JSON.stringify(units));
 }
 
-// ---------------- AI SIMULATION ----------------
-function generateAISuggestions() {
-    const theme = document.getElementById("theme").value;
-    const concepts = [...document.getElementById("keyConcepts").selectedOptions].map(o => o.value);
-
-    document.getElementById("aiInquiry").value =
-        `• How does "${theme}" influence our daily lives?\n` +
-        `• How do the concepts of ${concepts.join(", ")} shape understanding?\n` +
-        `• What responsibilities do learners have?`;
-
-    document.getElementById("aiLearning").value =
-        `• Inquiry-based discussions\n` +
-        `• Hands-on exploration\n` +
-        `• Reflection journals\n` +
-        `• Collaborative group work`;
+function renameUnit() {
+    if (currentIndex === null) return;
+    const name = prompt("Rename unit:");
+    if (!name) return;
+    units[currentIndex].name = name;
+    saveAll();
+    renderUnits();
 }
+
+function deleteUnit() {
+    if (currentIndex === null) return;
+    if (!confirm("Delete this unit?")) return;
+
+    units.splice(currentIndex, 1);
+    currentIndex = null;
+    saveAll();
+    renderUnits();
+    location.reload();
+}
+
+document.querySelectorAll("input, textarea, select").forEach(el => {
+    el.addEventListener("input", autoSave);
+});
+
+renderUnits();
 </script>
 
 </body>
