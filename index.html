@@ -83,6 +83,29 @@ h3 {
     background: #e0e0e0;
 }
 </style>
+    body {
+    background: #f7f9fc;
+}
+
+.section {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+textarea, input, select {
+    font-size: 15px;
+}
+
+button {
+    transition: 0.2s ease;
+}
+
+button:hover {
+    transform: scale(1.02);
+}
+
 </head>
 
 <body>
@@ -135,7 +158,8 @@ h3 {
 <textarea id="reflection"></textarea>
 </div>
 
-<button class="primary" onclick="saveUnit()">💾 Save Unit</button>
+<<button class="primary" onclick="saveUnit()">💾 Save / Update Unit</button>
+
 
 </div>
 </div>
@@ -190,7 +214,17 @@ function createUnit() {
 }
 
 function saveUnit() {
-    if (currentUnitIndex === null) return alert("Select or create a unit first.");
+    
+    // If no unit exists, create one automatically
+    if (currentUnitIndex === null) {
+        const defaultName = "New Unit";
+        units.push({
+            name: defaultName,
+            data: {}
+        });
+        currentUnitIndex = units.length - 1;
+        refreshUnitList();
+    }
 
     const data = {
         unitTitle: unitTitle.value,
@@ -204,7 +238,10 @@ function saveUnit() {
 
     units[currentUnitIndex].data = data;
     saveAll();
-    alert("Unit saved!");
+
+    alert("✅ Unit saved successfully!");
+}
+
 }
 
 function loadUnit(index) {
